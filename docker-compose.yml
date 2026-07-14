@@ -1,0 +1,30 @@
+# Standalone deploy for the Central-Service server. Points at Postgres,
+# Redis, and MongoDB running on their OWN dedicated servers (see .env) —
+# this compose file only runs Central-Service's own two containers.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - storage:/var/www/html/storage/app
+      # nginx runs in a separate container/filesystem — share public/ so
+      # it can serve static assets directly (see docker/entrypoint.sh).
+      - public_shared:/var/www/html/public-shared
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "8003:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - public_shared:/var/www/html/public-shared:ro
+
+volumes:
+  storage:
+  public_shared:
