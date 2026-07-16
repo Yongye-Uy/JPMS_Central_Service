@@ -3,9 +3,11 @@
 -- Run it with:
 --   psql -h <db-host> -U <db-user> -d jpms -f /path/to/db_indexes.sql
 
--- Example indexes (adjust column names to match your schema):
-CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
-CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders (created_at);
-CREATE INDEX IF NOT EXISTS idx_products_category_id ON products (category_id);
+-- Example indexes (adjusted for actual JPMS schema)
+CREATE INDEX IF NOT EXISTS idx_manuscripts_status ON manuscripts (status);
+CREATE INDEX IF NOT EXISTS idx_manuscripts_submitted_at ON manuscripts (submitted_at);
+CREATE INDEX IF NOT EXISTS idx_journals_title ON journals (title);
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
 
 -- Add any additional indexes needed for frequent query columns.
