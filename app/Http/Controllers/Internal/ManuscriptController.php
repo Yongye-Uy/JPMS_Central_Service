@@ -208,7 +208,13 @@ class ManuscriptController extends Controller
                 ]);
             }
 
-            $manuscript->update(['current_version_id' => $version->id]);
+            $isFirstVersion = $nextNumber === 1;
+            $isAuthorUploader = (int) $data['uploaded_by'] === (int) $manuscript->author_id;
+            $isRevisionRequired = $manuscript->status === 'Revision Required';
+
+            if ($isFirstVersion || ($isRevisionRequired && $isAuthorUploader)) {
+                $manuscript->update(['current_version_id' => $version->id]);
+            }
 
             return $version;
         });
