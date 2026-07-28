@@ -43,7 +43,7 @@ class ReviewInvitationController extends Controller
         $data = Validator::make($request->all(), [
             'reviewer_id' => 'required|integer|exists:users,id',
             'invited_by' => 'required|integer|exists:users,id',
-            'deadline' => 'required|date',
+            'deadline' => 'required|date|after:today',
         ])->validate();
 
         $existingActive = ReviewInvitation::where('manuscript_id', $manuscriptId)
@@ -99,7 +99,7 @@ class ReviewInvitationController extends Controller
         $invitation = ReviewInvitation::findOrFail($id);
 
         $data = Validator::make($request->all(), [
-            'requested_deadline' => 'required|date',
+            'requested_deadline' => 'required|date|after:today',
             'reason' => 'required|string',
         ])->validate();
 
