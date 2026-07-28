@@ -45,19 +45,33 @@ class ArticleController extends Controller
         // 1. Get the total count quickly WITHOUT evaluating complex withSum aggregations
         $total = $baseQuery->count();
 
-        // 2. Fetch only the items for the current page, adding the expensive aggregations
+        // 2. Fetch only the IDs for the current page. 
+        // This forces Postgres to use the published_at index and prevents it from 
+        // accidentally executing the withSum subqueries on the entire 500,000 row table.
         $perPage = $request->integer('per_page', 20);
         $page = $request->integer('page', 1);
         
-        $items = $baseQuery->clone()
-            ->with(['manuscript.author', 'manuscript.keywords', 'issue.journal'])
-            ->withSum('metrics as views', 'views')
-            ->withSum('metrics as downloads', 'downloads')
-            ->withSum('metrics as citations_count', 'citations_count')
+        $itemIds = $baseQuery->clone()
             ->orderByDesc('published_at')
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
-            ->get();
+            ->pluck('id');
+
+        // 3. Fetch the full items with expensive aggregations using ONLY those IDs
+        if ($itemIds->isEmpty()) {
+            $items = collect();
+        } else {
+            $items = Article::query()
+                ->whereIn('id', $itemIds)
+                ->with(['manuscript.author', 'manuscript.keywords', 'issue.journal'])
+                ->withSum('metrics as views', 'views')
+                ->withSum('metrics as downloads', 'downloads')
+                ->withSum('metrics as citations_count', 'citations_count')
+                ->get()
+                // Re-sort the collection in memory to match the original ID order
+                ->sortBy(fn ($model) => $itemIds->search($model->id))
+                ->values();
+        }
 
         $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
             $items,
