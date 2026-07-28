@@ -46,7 +46,7 @@ class ArticleController extends Controller
             });
         }
 
-        return response()->json($query->orderByDesc('published_at')->paginate($request->integer('per_page', 20)));
+        return response()->json($query->orderByDesc('published_at')->simplePaginate($request->integer('per_page', 20)));
     }
 
     public function show(int $id)
