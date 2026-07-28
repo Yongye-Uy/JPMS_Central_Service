@@ -42,7 +42,11 @@ class ManuscriptController extends Controller
             $query->where('status', $status);
         }
         if ($search = $request->query('q')) {
-            $query->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search]);
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search])
+                  ->orWhereHas('authors.user', fn ($u) => $u->where('full_name', 'ilike', "%{$search}%"))
+                  ->orWhereHas('keywords', fn ($k) => $k->where('keyword_text', 'ilike', "%{$search}%"));
+            });
         }
 
         return response()->json($query->orderByDesc('id')->paginate($request->integer('per_page', 20)));
@@ -125,6 +129,8 @@ class ManuscriptController extends Controller
 
         $manuscript->update($data);
 
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
+
         return response()->json($this->present($manuscript->fresh()));
     }
 
@@ -155,6 +161,8 @@ class ManuscriptController extends Controller
         }
 
         $manuscript->update(['current_version_id' => $version->id]);
+
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
 
         return response()->json($this->present($manuscript->fresh()));
     }
@@ -219,6 +227,8 @@ class ManuscriptController extends Controller
             return $version;
         });
 
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
+
         return response()->json($version->load('files'), 201);
     }
 
@@ -248,6 +258,8 @@ class ManuscriptController extends Controller
             'status' => 'Pending',
         ]);
 
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
+
         return response()->json($invitation, 201);
     }
 
@@ -261,6 +273,8 @@ class ManuscriptController extends Controller
         }
 
         $manuscript->update(['status' => 'Submitted', 'submitted_at' => now()]);
+
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
 
         return response()->json($this->present($manuscript->fresh()));
     }
@@ -280,6 +294,8 @@ class ManuscriptController extends Controller
             'withdrawn_at' => now(),
         ]);
 
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
+
         return response()->json($this->present($manuscript->fresh()));
     }
 
@@ -294,6 +310,8 @@ class ManuscriptController extends Controller
 
         $manuscript->update(['status' => 'Draft']);
 
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
+
         return response()->json($this->present($manuscript->fresh()));
     }
 
@@ -307,6 +325,8 @@ class ManuscriptController extends Controller
         }
 
         $manuscript->delete();
+
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
 
         return response()->json(null, 204);
     }
@@ -329,6 +349,8 @@ class ManuscriptController extends Controller
             }
         });
 
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
+
         return response()->json($this->present($manuscript->fresh()));
     }
 
@@ -345,6 +367,8 @@ class ManuscriptController extends Controller
                 $manuscript->article()->update(['published_at' => now()]);
             }
         });
+
+        $this->cache->forget(CacheAsideService::entityKey('manuscript', $id));
 
         return response()->json($this->present($manuscript->fresh()));
     }

@@ -39,7 +39,11 @@ class ArticleController extends Controller
             $query->whereHas('issue', fn ($q) => $q->where('year', $year));
         }
         if ($search = $request->query('q')) {
-            $query->whereHas('manuscript', fn ($q) => $q->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search]));
+            $query->whereHas('manuscript', function ($q) use ($search) {
+                $q->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search])
+                  ->orWhereHas('authors.user', fn ($u) => $u->where('full_name', 'ilike', "%{$search}%"))
+                  ->orWhereHas('keywords', fn ($k) => $k->where('keyword_text', 'ilike', "%{$search}%"));
+            });
         }
 
         return response()->json($query->orderByDesc('published_at')->paginate($request->integer('per_page', 20)));
@@ -74,6 +78,8 @@ class ArticleController extends Controller
 
         $article->update($data);
 
+        $this->cache->forget(CacheAsideService::entityKey('article', $article->id));
+
         return response()->json($article->fresh());
     }
 
@@ -86,6 +92,8 @@ class ArticleController extends Controller
         }
 
         $article->delete();
+
+        $this->cache->forget(CacheAsideService::entityKey('article', $id));
 
         return response()->json(null, 204);
     }
@@ -120,6 +128,8 @@ class ArticleController extends Controller
 
         $column = ['view' => 'views', 'download' => 'downloads', 'citation' => 'citations_count'][$data['event']];
         $metric->increment($column);
+
+        $this->cache->forget(CacheAsideService::entityKey('article', $article->id));
 
         return response()->json($metric->fresh());
     }

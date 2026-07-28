@@ -4,7 +4,6 @@ use App\Http\Controllers\Internal\ArticleController;
 use App\Http\Controllers\Internal\AuditLogController;
 use App\Http\Controllers\Internal\AuthController;
 use App\Http\Controllers\Internal\CoAuthorInvitationController;
-use App\Http\Controllers\Internal\EditorAssignmentController;
 use App\Http\Controllers\Internal\EditorialDecisionController;
 use App\Http\Controllers\Internal\IssueController;
 use App\Http\Controllers\Internal\JournalController;
@@ -75,7 +74,6 @@ Route::prefix('internal/v1')->middleware('internal.token')->group(function () {
     Route::get('reviews/{reviewId}/files/{fileId}/download', [ReviewController::class, 'downloadFile']);
 
     // Editorial workflow (module 4)
-    Route::post('manuscripts/{manuscriptId}/editor-assignments', [EditorAssignmentController::class, 'store']);
     Route::post('manuscripts/{manuscriptId}/decisions', [EditorialDecisionController::class, 'store']);
     Route::get('manuscripts/{manuscriptId}/messages', [MessageController::class, 'index']);
     Route::post('manuscripts/{manuscriptId}/messages', [MessageController::class, 'store']);
