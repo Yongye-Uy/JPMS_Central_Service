@@ -40,6 +40,10 @@ class ReviewInvitationController extends Controller
     {
         $manuscript = Manuscript::findOrFail($manuscriptId);
 
+        if (in_array($manuscript->status, ['Accepted', 'Rejected', 'Published', 'Withdrawn', 'Archived'])) {
+            return response()->json(['message' => "Cannot invite reviewers for a manuscript that is {$manuscript->status}."], 422);
+        }
+
         $data = Validator::make($request->all(), [
             'reviewer_id' => 'required|integer|exists:users,id',
             'invited_by' => 'required|integer|exists:users,id',
