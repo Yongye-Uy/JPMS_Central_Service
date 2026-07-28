@@ -42,8 +42,13 @@ class ArticleController extends Controller
             });
         }
 
-        // 1. Get the total count quickly WITHOUT evaluating complex withSum aggregations
-        $total = $baseQuery->count();
+        // 1. Get the total count quickly WITHOUT evaluating complex withSum aggregations.
+        // We cache this count for 10 minutes because Postgres sequential scans on 500k rows
+        // will choke the DB if 20 users request it concurrently.
+        $cacheKey = 'articles_count_' . md5(json_encode($request->query()));
+        $total = \Illuminate\Support\Facades\Cache::remember($cacheKey, 600, function () use ($baseQuery) {
+            return $baseQuery->count();
+        });
 
         // 2. Fetch only the IDs for the current page. 
         // This forces Postgres to use the published_at index and prevents it from 
