@@ -20,33 +20,54 @@ class ArticleController extends Controller
     /** Module 6 function 1: Public search — title/author/keyword/abstract/journal, published only unless include_unpublished. */
     public function index(Request $request)
     {
-        $query = Article::query()
-            ->with(['manuscript.author', 'manuscript.keywords', 'issue.journal'])
-            ->withSum('metrics as views', 'views')
-            ->withSum('metrics as downloads', 'downloads')
-            ->withSum('metrics as citations_count', 'citations_count');
+        $baseQuery = Article::query();
 
         if (! $request->boolean('include_unpublished')) {
-            $query->whereNotNull('published_at');
+            $baseQuery->whereNotNull('published_at');
         }
         if ($journalId = $request->query('journal_id')) {
-            $query->whereHas('issue', fn ($q) => $q->where('journal_id', $journalId));
+            $baseQuery->whereHas('issue', fn ($q) => $q->where('journal_id', $journalId));
         }
         if ($issueId = $request->query('issue_id')) {
-            $query->where('issue_id', $issueId);
+            $baseQuery->where('issue_id', $issueId);
         }
         if ($year = $request->query('year')) {
-            $query->whereHas('issue', fn ($q) => $q->where('year', $year));
+            $baseQuery->whereHas('issue', fn ($q) => $q->where('year', $year));
         }
         if ($search = $request->query('q')) {
-            $query->whereHas('manuscript', function ($q) use ($search) {
+            $baseQuery->whereHas('manuscript', function ($q) use ($search) {
                 $q->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search])
                   ->orWhereHas('authors.user', fn ($u) => $u->where('full_name', 'ilike', "%{$search}%"))
                   ->orWhereHas('keywords', fn ($k) => $k->where('keyword_text', 'ilike', "%{$search}%"));
             });
         }
 
-        return response()->json($query->orderByDesc('published_at')->simplePaginate($request->integer('per_page', 20)));
+        // 1. Get the total count quickly WITHOUT evaluating complex withSum aggregations
+        $total = $baseQuery->count();
+
+        // 2. Fetch only the items for the current page, adding the expensive aggregations
+        $perPage = $request->integer('per_page', 20);
+        $page = $request->integer('page', 1);
+        
+        $items = $baseQuery->clone()
+            ->with(['manuscript.author', 'manuscript.keywords', 'issue.journal'])
+            ->withSum('metrics as views', 'views')
+            ->withSum('metrics as downloads', 'downloads')
+            ->withSum('metrics as citations_count', 'citations_count')
+            ->orderByDesc('published_at')
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage)
+            ->get();
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return response()->json($paginator);
     }
 
     public function show(int $id)
