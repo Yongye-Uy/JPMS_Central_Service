@@ -101,8 +101,29 @@ class FakeDataSeeder extends Seeder
 
         $this->linkManuscriptCurrentVersions();
         $this->resetSequences();
+        
+        $this->command?->info('Generating articles from published manuscripts...');
+        $this->generateArticles();
 
         $this->command?->info('Fake data seeding complete.');
+    }
+
+    private function generateArticles(): void
+    {
+        DB::statement("
+            INSERT INTO articles (manuscript_id, issue_id, source_version_id, doi, page_start, page_end, pdf_path, published_at)
+            SELECT 
+                m.id, 
+                (SELECT id FROM issues WHERE journal_id = m.journal_id ORDER BY random() LIMIT 1), 
+                m.current_version_id, 
+                '10.1234/jpms.' || m.id, 
+                1, 
+                20, 
+                'sample_01.pdf', 
+                m.updated_at
+            FROM manuscripts m 
+            WHERE m.status = 'Published'
+        ");
     }
 
     private function fixture(string $name): ?array
