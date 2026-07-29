@@ -25,6 +25,13 @@ class FakeDataSeeder extends Seeder
     private const CHUNK_SIZE = 1000;
 
     /**
+     * Set to true to skip MongoDB audit_log writes entirely.
+     * Use this when seeding large datasets (500K+ rows) to avoid
+     * overwhelming MongoDB with bulk audit documents.
+     */
+    private const SKIP_AUDIT_LOG = true;
+
+    /**
      * table => column holding the moment the row was "created", used as the
      * audit_log created_at. Null means the table has no such column
      * (AuditObserver would have used now() at creation time in the app).
@@ -126,7 +133,7 @@ class FakeDataSeeder extends Seeder
             $assocRows = array_map(fn (array $row) => array_combine($columns, $row), $chunk);
             DB::table($table)->insert($assocRows);
 
-            if ($isAudited) {
+            if ($isAudited && ! self::SKIP_AUDIT_LOG) {
                 $this->emitAuditLogs($entityType, $auditColumn, $assocRows);
             }
         }
@@ -160,7 +167,9 @@ class FakeDataSeeder extends Seeder
             }
 
             DB::table('user_roles')->insert($assocRows);
-            $this->emitAuditLogs($entityType, null, $assocRows);
+            if (! self::SKIP_AUDIT_LOG) {
+                $this->emitAuditLogs($entityType, null, $assocRows);
+            }
         }
 
         $this->command?->info('user_roles: '.count($data['rows']).' rows');
