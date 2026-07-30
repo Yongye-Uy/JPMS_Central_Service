@@ -35,10 +35,21 @@ class ArticleController extends Controller
             $baseQuery->whereHas('issue', fn ($q) => $q->where('year', $year));
         }
         if ($search = $request->query('q')) {
-            $baseQuery->whereHas('manuscript', function ($q) use ($search) {
-                $q->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search])
-                  ->orWhereHas('authors.user', fn ($u) => $u->where('full_name', 'ilike', "%{$search}%"))
-                  ->orWhereHas('keywords', fn ($k) => $k->where('keyword_text', 'ilike', "%{$search}%"));
+            $field = $request->query('field');
+            $baseQuery->whereHas('manuscript', function ($q) use ($search, $field) {
+                if ($field === 'title') {
+                    $q->where('title', 'ilike', "%{$search}%");
+                } elseif ($field === 'author') {
+                    $q->whereHas('authors.user', fn ($u) => $u->where('full_name', 'ilike', "%{$search}%"));
+                } elseif ($field === 'keyword') {
+                    $q->whereHas('keywords', fn ($k) => $k->where('keyword_text', 'ilike', "%{$search}%"));
+                } elseif ($field === 'abstract') {
+                    $q->where('abstract', 'ilike', "%{$search}%");
+                } else {
+                    $q->whereRaw("search_vector @@ plainto_tsquery('english', ?)", [$search])
+                      ->orWhereHas('authors.user', fn ($u) => $u->where('full_name', 'ilike', "%{$search}%"))
+                      ->orWhereHas('keywords', fn ($k) => $k->where('keyword_text', 'ilike', "%{$search}%"));
+                }
             });
         }
 

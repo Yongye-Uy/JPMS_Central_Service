@@ -22,6 +22,6 @@ class AuditLogController extends Controller
             $query->where('user_id', (int) $userId);
         }
 
-        return response()->json($query->paginate($request->integer('per_page', 50)));
+        return response()->json($query->simplePaginate($request->integer('per_page', 50)));
     }
 }
