@@ -36,6 +36,7 @@ class AppServiceProvider extends ServiceProvider
         EditorAssignment::class,
         ManuscriptFile::class,
         Journal::class,
+        \App\Models\User::class,
     ];
 
     public function register(): void {}
