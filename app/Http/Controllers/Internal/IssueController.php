@@ -42,11 +42,15 @@ class IssueController extends Controller
         return response()->json($issue, 201);
     }
 
-    public function show(int $id)
+    public function show(int $id, Request $request)
     {
-        return response()->json(
-            Issue::with(['journal', 'articles.manuscript.author', 'articles.manuscript.keywords'])->findOrFail($id)
-        );
+        $query = Issue::with('journal');
+        
+        if (! $request->boolean('without_articles')) {
+            $query->with(['articles.manuscript.author', 'articles.manuscript.keywords']);
+        }
+        
+        return response()->json($query->findOrFail($id));
     }
 
     /** Module 5 function 5: Add article to issue (generates DOI: dd.mm.yyyy/JPMS-{article_id} once persisted). */
@@ -93,6 +97,6 @@ class IssueController extends Controller
         $issue->articles()->whereNull('published_at')->update(['published_at' => now()]);
         Manuscript::whereIn('id', $issue->articles->pluck('manuscript_id'))->update(['status' => 'Published']);
 
-        return response()->json($issue->fresh('articles'));
+        return response()->json(['message' => 'Published successfully.']);
     }
 }
