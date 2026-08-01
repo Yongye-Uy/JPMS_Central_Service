@@ -10,7 +10,7 @@ class AuditLogController extends Controller
 {
     public function index(Request $request)
     {
-        $query = AuditLog::query()->orderByDesc('created_at');
+        $query = AuditLog::query()->orderByDesc('_id');
 
         if ($entityType = $request->query('entity_type')) {
             $query->where('entity_type', $entityType);
